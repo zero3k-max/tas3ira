@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تسعيرة مجاني</title>
+<style>
+:root{--g:#1f5d4f;--g2:#357a6c;--l:#e3f5ee;--bd:#7fb3aa;--t:#222;--m:#777;--r:#c0392b;--bg:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,"Segoe UI",Tahoma,sans-serif;background:#f4f8f7;color:var(--t);padding-bottom:90px}
+header{background:var(--g);color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 16px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:5}
+header h1{font-size:20px;margin:0}
+.ib{background:none;border:0;color:inherit;font-size:22px;padding:4px 8px;cursor:pointer}
+.bar{display:flex;gap:8px;padding:10px 12px;align-items:center}
+.bar input{flex:1;padding:11px 14px;border:1.5px solid var(--bd);border-radius:14px;font-size:15px;background:#fff;font-family:inherit}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 12px 8px;scrollbar-width:none}
+.chip{flex:none;padding:8px 16px;border-radius:20px;background:var(--l);border:0;font-size:14px;color:var(--g);cursor:pointer;font-family:inherit}
+.chip.on{background:var(--g);color:#fff}
+.tools{display:flex;gap:8px;padding:0 12px 8px;overflow-x:auto}
+.tools button{flex:none;font-size:13px;padding:7px 12px;border-radius:12px;border:1px solid var(--bd);background:#fff;color:var(--g);font-family:inherit}
+.card{background:#fff;margin:8px 12px;padding:12px 14px;border-radius:16px;box-shadow:0 1px 4px #0001;display:flex;justify-content:space-between;gap:10px;cursor:pointer}
+.card .n{font-weight:700;font-size:16px}
+.card .s{font-size:12.5px;color:var(--m);margin-top:4px;line-height:1.7}
+.card .p{font-weight:700;color:var(--g);font-size:17px;white-space:nowrap;text-align:left}
+.card .p small{display:block;font-weight:400;font-size:11px;color:var(--m)}
+.exp{color:var(--r)!important;font-weight:700}
+.empty{text-align:center;color:var(--m);padding:50px 20px;line-height:2}
+.fab{position:fixed;bottom:calc(env(safe-area-inset-bottom) + 20px);left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#6ab0a6,var(--g));color:#fff;border:0;padding:15px 36px;border-radius:30px;font-size:17px;font-family:inherit;box-shadow:0 4px 12px #0004;z-index:4}
+.ov{position:fixed;inset:0;background:#0006;z-index:10;display:none;align-items:flex-end}
+.ov.show{display:flex}
+.sh{background:#fff;width:100%;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom) + 22px)}
+.sh h2{margin:0 0 12px;font-size:18px;color:var(--g)}
+.f{display:block;margin-bottom:10px}
+.f span{font-size:12px;color:var(--g);display:block;margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;padding:11px 12px;border:1.5px solid var(--bd);border-radius:14px;font-size:15px;font-family:inherit;background:#fff}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.btn{width:100%;padding:13px;border-radius:26px;border:0;background:var(--g);color:#fff;font-size:16px;font-family:inherit;margin-top:6px}
+.btn.s2{background:var(--l);color:var(--g)}.btn.d{background:#fdeaea;color:var(--r)}
+.note{font-size:12.5px;color:var(--m);line-height:1.8;margin:4px 0 10px}
+.menu button{display:block;width:100%;text-align:right;padding:14px;margin-bottom:8px;border:0;border-radius:14px;background:var(--l);color:var(--g);font-size:15px;font-family:inherit}
+</style>
+</head>
+<body>
+<header>
+  <button class="ib" id="mBtn">☰</button>
+  <h1>تسعيرة</h1>
+  <button class="ib" id="cBtn" title="أقسام">🗂</button>
+</header>
+<div class="bar"><input id="q" placeholder="🔍 بحث عن منتج أو باركود"></div>
+<div class="chips" id="chips"></div>
+<div class="tools">
+  <button id="sName">ترتيب بالاسم</button>
+  <button id="sAsc">السعر ↑</button>
+  <button id="sDesc">السعر ↓</button>
+  <button id="bulk">تغيير أسعار القسم</button>
+</div>
+<div id="list"></div>
+<button class="fab" id="add">＋ إضافة منتج</button>
+
+<div class="ov" id="ov"><div class="sh" id="sh"></div></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const KEY='tas3ira_v1';
+let S={cats:[],prods:[],cat:'all',sort:'name'};
+let memo=null;
+function load(){try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({cats:S.cats,prods:S.prods}))}catch(e){}}
+load();
+const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const fmt=n=>(Number(n)||0).toLocaleString('en-US');
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function open(html){$('#sh').innerHTML=html;$('#ov').classList.add('show')}
+function close(){$('#ov').classList.remove('show')}
+$('#ov').addEventListener('click',e=>{if(e.target.id==='ov')close()});
+
+function render(){
+  $('#chips').innerHTML='<button class="chip '+(S.cat==='all'?'on':'')+'" data-c="all">الكل</button>'+
+    S.cats.map(c=>`<button class="chip ${S.cat===c.id?'on':''}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+  const q=$('#q').value.trim().toLowerCase();
+  let a=S.prods.filter(p=>(S.cat==='all'||p.cat===S.cat)&&(!q||(p.name+' '+(p.code||'')).toLowerCase().includes(q)));
+  if(S.sort==='asc')a.sort((x,y)=>x.price-y.price);
+  else if(S.sort==='desc')a.sort((x,y)=>y.price-x.price);
+  else a.sort((x,y)=>x.name.localeCompare(y.name,'ar'));
+  if(!a.length){$('#list').innerHTML='<div class="empty">لا توجد منتجات<br>اضغط «إضافة منتج» للبدء</div>';return}
+  const today=new Date().toISOString().slice(0,10);
+  $('#list').innerHTML=a.map(p=>{
+    const cn=(S.cats.find(c=>c.id===p.cat)||{}).name;
+    const ex=p.exp&&p.exp<=today;
+    const profit=p.cost?` · ربح ${fmt(p.price-p.cost)}`:'';
+    return `<div class="card" data-p="${p.id}"><div><div class="n">${esc(p.name)}</div>
+    <div class="s">${[cn,p.type,p.code].filter(Boolean).map(esc).join(' · ')}${profit}
+    ${p.exp?`<br><span class="${ex?'exp':''}">الصلاحية: ${esc(p.exp)}${ex?' (منتهية)':''}</span>`:''}</div></div>
+    <div class="p">${fmt(p.price)}<small>د.ع / ${esc(p.unit||'قطعة')}</small></div></div>`}).join('');
+}
+$('#chips').onclick=e=>{const c=e.target.dataset.c;if(c){S.cat=c;render()}};
+$('#q').oninput=render;
+$('#sName').onclick=()=>{S.sort='name';render()};
+$('#sAsc').onclick=()=>{S.sort='asc';render()};
+$('#sDesc').onclick=()=>{S.sort='desc';render()};
+$('#list').onclick=e=>{const c=e.target.closest('.card');if(c)form(c.dataset.p)};
+$('#add').onclick=()=>form();
+
+function form(pid){
+  const p=S.prods.find(x=>x.id===pid)||{cat:S.cat==='all'?(S.cats[0]||{}).id:S.cat};
+  const opts=S.cats.map(c=>`<option value="${c.id}" ${p.cat===c.id?'selected':''}>${esc(c.name)}</option>`).join('');
+  open(`<h2>${pid?'تعديل منتج':'إضافة منتج'}</h2>
+  <label class="f"><span>اسم المنتج</span><input id="fn" value="${esc(p.name)}"></label>
+  <div class="row"><label class="f"><span>سعر البيع</span><input id="fp" type="number" inputmode="decimal" value="${p.price??''}"></label>
+  <label class="f"><span>الوحدة (قطعة، كرتونة، طقم…)</span><input id="fu" value="${esc(p.unit)}"></label></div>
+  <label class="f"><span>القسم</span><select id="fc"><option value="">بدون قسم</option>${opts}</select></label>
+  <div class="note">اختياري</div>
+  <div class="row"><label class="f"><span>سعر الشراء</span><input id="fk" type="number" inputmode="decimal" value="${p.cost??''}"></label>
+  <label class="f"><span>نوع المنتج</span><input id="ft" value="${esc(p.type)}"></label></div>
+  <label class="f"><span>كود / باركود المنتج</span><input id="fb" inputmode="numeric" value="${esc(p.code)}"></label>
+  <label class="f"><span>تاريخ الصلاحية</span><input id="fe" type="date" value="${esc(p.exp)}"></label>
+  <button class="btn" id="fs">حفظ</button>
+  ${pid?'<button class="btn d" id="fd">حذف المنتج</button>':''}`);
+  $('#fs').onclick=()=>{
+    const name=$('#fn').value.trim();if(!name){$('#fn').focus();return}
+    const o={id:pid||id(),name,price:+$('#fp').value||0,unit:$('#fu').value.trim(),cat:$('#fc').value,
+      cost:+$('#fk').value||0,type:$('#ft').value.trim(),code:$('#fb').value.trim(),exp:$('#fe').value};
+    if(pid)S.prods=S.prods.map(x=>x.id===pid?o:x);else S.prods.push(o);
+    save();close();render()};
+  if(pid)$('#fd').onclick=()=>ask('حذف هذا المنتج؟',()=>{S.prods=S.prods.filter(x=>x.id!==pid);save();render()});
+}
+function ask(msg,yes){open(`<h2>${msg}</h2><button class="btn d" id="y">نعم</button><button class="btn s2" id="n">إلغاء</button>`);
+  $('#y').onclick=()=>{close();yes()};$('#n').onclick=close}
+
+function cats(){
+  open(`<h2>الأقسام</h2>
+  ${S.cats.map(c=>`<div class="row" style="margin-bottom:8px"><input class="cn" data-i="${c.id}" value="${esc(c.name)}" style="padding:10px;border:1.5px solid var(--bd);border-radius:12px;font-family:inherit"><button class="btn d" style="width:70px;flex:none;margin:0;padding:8px" data-x="${c.id}">حذف</button></div>`).join('')}
+  <label class="f"><span>قسم جديد</span><input id="nc"></label>
+  <button class="btn" id="cs">حفظ</button>`);
+  document.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const i=b.dataset.x;
+    ask('حذف القسم؟ (المنتجات تبقى بدون قسم)',()=>{S.cats=S.cats.filter(c=>c.id!==i);S.prods.forEach(p=>{if(p.cat===i)p.cat=''});if(S.cat===i)S.cat='all';save();render()})});
+  $('#cs').onclick=()=>{
+    document.querySelectorAll('.cn').forEach(i=>{const c=S.cats.find(c=>c.id===i.dataset.i);if(c&&i.value.trim())c.name=i.value.trim()});
+    const n=$('#nc').value.trim();if(n)S.cats.push({id:id(),name:n});
+    save();close();render()};
+}
+$('#cBtn').onclick=cats;
+
+$('#bulk').onclick=()=>{
+  if(S.cat==='all'){open('<h2>اختر قسمًا أولًا</h2><div class="note">اضغط على اسم القسم في الأعلى ثم أعد المحاولة.</div><button class="btn s2" id="n">حسنًا</button>');$('#n').onclick=close;return}
+  const cn=S.cats.find(c=>c.id===S.cat).name;
+  open(`<h2>تغيير أسعار قسم «${esc(cn)}»</h2>
+  <div class="row"><label class="f"><span>النوع</span><select id="bt"><option value="pct">نسبة %</option><option value="amt">مبلغ ثابت</option></select></label>
+  <label class="f"><span>القيمة (سالب للتخفيض)</span><input id="bv" type="number" inputmode="decimal" placeholder="10"></label></div>
+  <label class="f"><span>تقريب لأقرب</span><select id="br"><option value="1">1</option><option value="250">250</option><option value="500">500</option><option value="1000">1000</option></select></label>
+  <button class="btn" id="bg">تطبيق</button>`);
+  $('#bg').onclick=()=>{const v=+$('#bv').value;if(!v)return;const t=$('#bt').value,r=+$('#br').value;
+    S.prods.forEach(p=>{if(p.cat===S.cat){let n=t==='pct'?p.price*(1+v/100):p.price+v;p.price=Math.max(0,Math.round(n/r)*r)}});
+    save();close();render()};
+};
+
+$('#mBtn').onclick=()=>{
+  open(`<h2>القائمة</h2><div class="menu">
+  <button id="m1">📥 إضافة منتجات دفعة واحدة (لصق من إكسل)</button>
+  <button id="m2">💾 نسخة احتياطية (نسخ)</button>
+  <button id="m3">♻️ استرجاع نسخة احتياطية</button>
+  <button id="m4">🗑 مسح كل البيانات</button></div>`);
+  $('#m1').onclick=imp;$('#m2').onclick=bak;$('#m3').onclick=rest;
+  $('#m4').onclick=()=>ask('مسح كل البيانات نهائيًا؟',()=>{S.cats=[];S.prods=[];S.cat='all';save();render()});
+};
+function imp(){
+  open(`<h2>إضافة من إكسل</h2>
+  <div class="note">انسخ الأعمدة من إكسل والصقها هنا، كل منتج في سطر بالترتيب:<br><b>الاسم ← سعر البيع ← الوحدة ← سعر الشراء ← الباركود</b> (الاسم والسعر فقط مطلوبان). تُضاف إلى القسم المحدد حاليًا.</div>
+  <label class="f"><textarea id="it" rows="8" placeholder="شاي ربيع&#9;1500&#9;علبة"></textarea></label>
+  <label class="f"><span>أو اختر ملف CSV / TXT</span><input id="if" type="file" accept=".csv,.txt,.tsv"></label>
+  <button class="btn" id="ig">إضافة</button>`);
+  $('#if').onchange=e=>{const f=e.target.files[0];if(f){const r=new FileReader();r.onload=()=>{$('#it').value=r.result};r.readAsText(f)}};
+  $('#ig').onclick=()=>{let n=0;
+    $('#it').value.split(/\r?\n/).forEach(l=>{const c=l.split(/\t|,|؛|;/).map(x=>x.trim());
+      const num=x=>+String(x||'').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/[^\d.]/g,'');
+      if(c[0]&&c[1]&&num(c[1])>=0&&!isNaN(num(c[1]))){S.prods.push({id:id(),name:c[0],price:num(c[1]),unit:c[2]||'',cost:num(c[3])||0,code:c[4]||'',type:'',exp:'',cat:S.cat==='all'?'':S.cat});n++}});
+    save();render();open(`<h2>تمت إضافة ${n} منتج</h2><button class="btn" id="n">حسنًا</button>`);$('#n').onclick=close};
+}
+function bak(){
+  const j=JSON.stringify({cats:S.cats,prods:S.prods});
+  open(`<h2>نسخة احتياطية</h2><div class="note">انسخ هذا النص واحفظه في ملاحظات أو أرسله لنفسك على واتساب. يمكنك لصقه لاحقًا في «استرجاع» على أي جهاز.</div>
+  <textarea id="bj" rows="7" readonly style="width:100%;border-radius:12px;border:1.5px solid var(--bd);padding:8px;direction:ltr">${esc(j)}</textarea>
+  <button class="btn" id="bc">نسخ</button>`);
+  $('#bc').onclick=()=>{const t=$('#bj');t.select();try{navigator.clipboard.writeText(j)}catch(e){try{document.execCommand('copy')}catch(_){}}$('#bc').textContent='تم النسخ ✓'};
+}
+function rest(){
+  open(`<h2>استرجاع نسخة</h2><div class="note">الصق النص الذي نسخته سابقًا (سيستبدل البيانات الحالية).</div>
+  <textarea id="rj" rows="7" style="width:100%;border-radius:12px;border:1.5px solid var(--bd);padding:8px;direction:ltr"></textarea>
+  <button class="btn" id="rg">استرجاع</button><div class="note" id="re" style="color:var(--r)"></div>`);
+  $('#rg').onclick=()=>{try{const d=JSON.parse($('#rj').value);if(!Array.isArray(d.cats)||!Array.isArray(d.prods))throw 0;
+    S.cats=d.cats;S.prods=d.prods;S.cat='all';save();close();render()}catch(e){$('#re').textContent='النص غير صالح'}};
+}
+render();
+</script>
+</body>
+</html>
